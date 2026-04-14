@@ -1,0 +1,7 @@
+cd C:\Users\ks146\Desktop\AWARE_PROJECT\aware-frontend
+npm start
+
+
+
+
+Hugging Face API code:  your_token_here
