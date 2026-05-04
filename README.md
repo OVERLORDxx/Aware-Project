@@ -90,12 +90,6 @@ const HF_TOKEN = "your_token_here";
 
 ---
 
-## 📸 Screenshots
-
-(Add screenshots of your UI here)
-
----
-
 ## 📌 Future Improvements
 
 - Blockchain integration (Ethereum)  
