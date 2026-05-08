@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
-const API = 'http://localhost:8080/api/reports';
+const API = 'https://your-backend-name.onrender.com';
 // NOTE: HF token is now in ReportController.java (backend)
 // React no longer calls HuggingFace directly — Spring Boot does it server-side
 
