@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import './App.css';
 
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
-const API = 'https://your-backend-name.onrender.com';
+const API = 'https://aware-backend-38v2.onrender.com/api/reports';
 // NOTE: HF token is now in ReportController.java (backend)
 // React no longer calls HuggingFace directly — Spring Boot does it server-side
 
@@ -22,12 +22,6 @@ function saveUsers(users) {
 }
 
 // ─── AI ANALYSIS ─────────────────────────────────────────────────────────────
-// HOW IT WORKS:
-// React sends the image to Spring Boot /api/reports/analyze
-// Spring Boot calls Hugging Face BLIP model (server-to-server, no CORS)
-// BLIP generates a caption like "a road with large potholes and cracks"
-// Spring Boot maps that to a civic category and returns it to React
-// React shows the result in the form and stores it with the report
 async function analyzeImageWithAI(file) {
   const formData = new FormData();
   formData.append('file', file);
