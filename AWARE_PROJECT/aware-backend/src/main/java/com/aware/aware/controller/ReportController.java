@@ -23,7 +23,7 @@ public class ReportController {
     @Autowired
     private ReportRepository reportRepository;
 
-    private static final String HF_TOKEN = "Past_Your_Token";
+    private static final String HF_TOKEN = "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";
 
     // WHY THESE MODELS:
     // microsoft/resnet-50 → Always warm on HF (millions of daily requests). Never cold starts.
