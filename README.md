@@ -11,7 +11,7 @@
 
 **[https://aware-project.onrender.com](https://aware-project.onrender.com)**
 
-- Frontend hosted on **Render** (Static Site)
+- Frontend hosted on **Render** (web service)
 - Backend hosted on **Render** (Web Service)
 - Database hosted on **Railway** (Managed MySQL)
 
