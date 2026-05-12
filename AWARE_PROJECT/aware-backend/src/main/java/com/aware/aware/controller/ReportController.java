@@ -23,8 +23,7 @@ public class ReportController {
     @Autowired
     private ReportRepository reportRepository;
 
-    private static final String HF_TOKEN = "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";
-
+private static final String HF_TOKEN = System.getenv("HF_TOKEN");
     // WHY THESE MODELS:
     // microsoft/resnet-50 → Always warm on HF (millions of daily requests). Never cold starts.
     //                        Returns top-5 image classification labels with confidence scores.
