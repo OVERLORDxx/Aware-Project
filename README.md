@@ -28,8 +28,8 @@ AWARE (AI-Powered Blockchain-Inspired Civic Issue Reporting Platform) lets citiz
 ### 🔗 Blockchain-Inspired Hash Chain
 Each report generates a SHA-256 hash linked to the previous report's hash, forming an immutable chain. Any modification to a past report breaks the chain and is immediately flagged by the verification endpoint.
 
-### 🤖 AI Image Classification (Zero-Shot)
-Integrates the **OpenAI CLIP model** via HuggingFace Inference API. Users upload a photo and the model automatically classifies the issue type (Pothole, Garbage, Water Leakage, etc.) — no custom training data required.
+### 🤖 AI Image Classification
+Integrates **ResNet-50 and ViT** models via HuggingFace Inference API. Users upload a photo and the model automatically classifies the issue type (Pothole, Garbage, Water Leakage, etc.) — no custom training data required.
 
 ### 📍 GPS Location Detection
 Uses the browser Geolocation API with **OpenStreetMap Nominatim** reverse geocoding to auto-fill the human-readable address from GPS coordinates.
@@ -52,7 +52,7 @@ Not a localhost prototype — fully deployed and publicly accessible.
 | Frontend | React.js 18, HTML5, CSS3, JavaScript (ES6+), Axios |
 | Backend | Spring Boot 3.x (Java 17), Spring Data JPA, Hibernate |
 | Database | MySQL 8.0 (hosted on Railway) |
-| AI | OpenAI CLIP (ViT-B/32) via HuggingFace Inference API |
+| AI | microsoft/resnet-50 + google/vit-base-patch16-224 via HuggingFace Inference API |
 | Location | OpenStreetMap Nominatim API |
 | Security | SHA-256 (java.security.MessageDigest), BCrypt password hashing |
 | Deployment | Render (frontend + backend), Railway (MySQL) |
@@ -63,7 +63,7 @@ Not a localhost prototype — fully deployed and publicly accessible.
 ## ⚙️ How It Works
 
 1. User registers and logs in
-2. User uploads an image → CLIP model classifies the issue type automatically
+2. User uploads an image → ResNet-50 and ViT models classify the issue type automatically
 3. GPS location is detected and reverse-geocoded via OpenStreetMap
 4. On submission, the backend fetches the last report's hash, computes `SHA-256(reportData + prevHash)`, and stores the new report with its hash
 5. Admin can update report status and verify the entire hash chain for integrity
@@ -121,17 +121,14 @@ mvn clean package
 java -jar target/aware-backend.jar
 ```
 
+Set your HuggingFace token as an environment variable `HF_TOKEN` on your deployment platform (e.g. Render → Environment tab).
+
 ### Frontend
 
 ```bash
 cd frontend
 npm install
 npm start
-```
-
-Add your HuggingFace API token in the relevant service file:
-```js
-const HF_TOKEN = "your_huggingface_token";
 ```
 
 ---
@@ -145,8 +142,8 @@ Citizens / Admins
 React.js Frontend  ──────────────────────►  Spring Boot Backend
 (Render Static Site)    HTTPS REST APIs     (Render Web Service)
                                                     │
-                              HuggingFace API ◄─────┤
-                              (CLIP Model)           │
+                          HuggingFace API ◄─────────┤
+                    (ResNet-50 + ViT models)         │
                                                     ▼
                                             MySQL Database
                                            (Railway Cloud)
@@ -196,7 +193,7 @@ CI/CD is handled automatically — every push to `main` triggers a redeploy on R
 **Kuldeep Singh**
 - GitHub: [@OVERLORDxx](https://github.com/OVERLORDxx)
 - Email: ks14635142@gmail.com
-- LinkedIn: [kuldeep-singh-b4164228b](https://www.linkedin.com/in/kuldeep-singh-b4164228b)
+- LinkedIn: https://linkedin.com/in/kuldeep-singh2004
 
 ---
 
