@@ -3,8 +3,6 @@ import './App.css';
 
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
 const API = 'https://aware-backend-38v2.onrender.com/api/reports';
-// NOTE: HF token is now in ReportController.java (backend)
-// React no longer calls HuggingFace directly — Spring Boot does it server-side
 
 // ─── CREATOR INFO ─────────────────────────────────────────────────────────────
 const CREATOR = { name: 'Kuldeep Singh', email: 'ks14635142@gmail.com', phone: '6377328251' };
@@ -21,16 +19,6 @@ function saveUsers(users) {
   localStorage.setItem('aware_users', JSON.stringify(users));
 }
 
-// ─── AI ANALYSIS ─────────────────────────────────────────────────────────────
-async function analyzeImageWithAI(file) {
-  const formData = new FormData();
-  formData.append('file', file);
-  const res = await fetch(`${API}/analyze`, { method: 'POST', body: formData });
-  if (!res.ok) throw new Error('Analyze endpoint returned ' + res.status);
-  const text = await res.text();
-  return text.trim();
-}
-
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 function getTypeClass(type) {
   if (!type) return 'type-default';
@@ -43,19 +31,19 @@ function getTypeClass(type) {
   return 'type-default';
 }
 function getTypePlaceholder(type) {
-  if (!type) return { icon: '🏙️', label: 'No Image' };
+  if (!type) return { label: 'No Image' };
   const t = type.toLowerCase();
-  if (t.includes('road') || t.includes('pothole')) return { icon: '🛣️', label: 'Road Issue' };
-  if (t.includes('garbage') || t.includes('waste'))return { icon: '🗑️', label: 'Waste Issue' };
-  if (t.includes('water') || t.includes('flood'))  return { icon: '💧', label: 'Water Issue' };
-  if (t.includes('light'))                         return { icon: '💡', label: 'Light Issue' };
-  if (t.includes('drain'))                         return { icon: '🌀', label: 'Drainage' };
-  if (t.includes('tree'))                          return { icon: '🌳', label: 'Vegetation' };
-  return { icon: '📍', label: 'Civic Issue' };
+  if (t.includes('road') || t.includes('pothole')) return { label: 'Road Issue' };
+  if (t.includes('garbage') || t.includes('waste'))return { label: 'Waste Issue' };
+  if (t.includes('water') || t.includes('flood'))  return { label: 'Water Issue' };
+  if (t.includes('light'))                         return { label: 'Light Issue' };
+  if (t.includes('drain'))                         return { label: 'Drainage' };
+  if (t.includes('tree'))                          return { label: 'Vegetation' };
+  return { label: 'Civic Issue' };
 }
 const STATUS_LABELS = {
-  PENDING:'⏳ Pending', IN_PROGRESS:'🔄 In Progress',
-  COMPLETED:'✅ Completed', REJECTED:'❌ Rejected'
+  PENDING:'Pending', IN_PROGRESS:'In Progress',
+  COMPLETED:'Completed', REJECTED:'Rejected'
 };
 function generateFakeHash() {
   return Array.from({length:64}, () => Math.floor(Math.random()*16).toString(16)).join('');
@@ -63,10 +51,8 @@ function generateFakeHash() {
 
 // ─── TOAST ───────────────────────────────────────────────────────────────────
 function Toast({ message, type, visible }) {
-  const icons = { success:'✓', error:'✕', info:'ℹ' };
   return (
     <div className={`toast toast--${type} ${visible ? 'toast--show' : ''}`}>
-      <span className="toast__icon">{icons[type] || 'ℹ'}</span>
       {message}
     </div>
   );
@@ -79,7 +65,6 @@ function LandingPage({ onGetStarted }) {
       <div className="orb orb--1"/><div className="orb orb--2"/>
       <nav className="landing-nav">
         <div className="logo-wrap">
-          <div className="logo-icon">🔗</div>
           <div className="logo-text">AWARE</div>
         </div>
         <div className="landing-nav-links">
@@ -91,22 +76,21 @@ function LandingPage({ onGetStarted }) {
       </nav>
 
       <section className="land-hero">
-        <div className="land-hero-badge">🔗 Blockchain-Inspired · AI-Powered · SHA-256 Secured</div>
+        <div className="land-hero-badge">Blockchain-Inspired · SHA-256 Secured</div>
         <h1 className="land-hero-title">
           Report Civic Issues.<br/>
           <span className="land-hero-accent">Make Your City Better.</span>
         </h1>
         <p className="land-hero-desc">
           AWARE is a tamper-proof civic reporting platform where every issue is
-          cryptographically hashed and linked — creating an immutable chain of civic
-          data verified by Hugging Face AI image analysis.
+          cryptographically hashed and linked, creating an immutable chain of civic data.
         </p>
         <div className="land-hero-btns">
-          <button className="btn-land-primary" onClick={onGetStarted}>🚀 Start Reporting Now</button>
-          <a className="btn-land-secondary" href="#about">Learn More ↓</a>
+          <button className="btn-land-primary" onClick={onGetStarted}>Start Reporting</button>
+          <a className="btn-land-secondary" href="#about">Learn More</a>
         </div>
         <div className="land-stats">
-          {[{n:'SHA-256',l:'Hash Algorithm'},{n:'BLIP AI',l:'Image Analysis'},{n:'100%',l:'Tamper Proof'},{n:'Live',l:'Status Updates'}].map(s=>(
+          {[{n:'SHA-256',l:'Hash Algorithm'},{n:'MySQL',l:'Backend Store'},{n:'100%',l:'Tamper Proof'},{n:'Live',l:'Status Updates'}].map(s=>(
             <div key={s.l} className="land-stat">
               <span className="land-stat__num">{s.n}</span>
               <span className="land-stat__label">{s.l}</span>
@@ -125,15 +109,14 @@ function LandingPage({ onGetStarted }) {
         </p>
         <div className="land-features">
           {[
-            {icon:'🔗',title:'Blockchain Hashing',desc:'Every report generates a SHA-256 hash linked to the previous, creating a verifiable chain.'},
-            {icon:'🤖',title:'BLIP AI Analysis',desc:'Hugging Face BLIP model reads your uploaded image and generates a natural language description of the issue.'},
-            {icon:'📍',title:'GPS Location',desc:'Auto-detect your GPS location via OpenStreetMap or type an address manually.'},
-            {icon:'🛡️',title:'Admin Dashboard',desc:'Separate admin portal to manage statuses, view all reports, and manage registered users.'},
-            {icon:'🔒',title:'Role-Based Access',desc:'Users submit reports. Admins manage them. Clear separation of responsibilities.'},
-            {icon:'⛓️',title:'Tamper Detection',desc:'Any altered record breaks the hash chain — making data integrity fully verifiable.'},
+            {title:'Blockchain Hashing',desc:'Every report generates a SHA-256 hash linked to the previous, creating a verifiable chain.'},
+            {title:'GPS Location',desc:'Auto-detect your GPS location via OpenStreetMap or type an address manually.'},
+            {title:'Admin Dashboard',desc:'Separate admin portal to manage statuses, view all reports, and manage registered users.'},
+            {title:'Role-Based Access',desc:'Users submit reports. Admins manage them. Clear separation of responsibilities.'},
+            {title:'Tamper Detection',desc:'Any altered record breaks the hash chain, making data integrity fully verifiable.'},
+            {title:'Image Upload',desc:'Attach a photo to your report, stored securely alongside the hash chain.'},
           ].map(f=>(
             <div key={f.title} className="land-feature-card">
-              <div className="land-feature-icon">{f.icon}</div>
               <div className="land-feature-title">{f.title}</div>
               <div className="land-feature-desc">{f.desc}</div>
             </div>
@@ -147,17 +130,17 @@ function LandingPage({ onGetStarted }) {
         <div className="land-steps">
           {[
             {n:'01',title:'Sign Up / Login',desc:'Create your account or login. Admins have a separate secure portal.'},
-            {n:'02',title:'Upload Image',desc:'Select issue type, describe the problem, detect GPS location, upload a photo.'},
-            {n:'03',title:'AI Analyzes',desc:'Spring Boot sends your image to Hugging Face BLIP. BLIP describes what it sees. We map it to a civic category.'},
-            {n:'04',title:'Hash Generated',desc:'Spring Boot creates a SHA-256 hash linking your report to the previous one.'},
-            {n:'05',title:'Stored in MySQL',desc:'Saved with hash, location, AI label, submitter info, and status.'},
-            {n:'06',title:'Admin Reviews',desc:'Admin updates status (Pending → In Progress → Completed) and manages the chain.'},
-          ].map((s,i)=>(
+            {n:'02',title:'Fill the Form',desc:'Select issue type, describe the problem, detect GPS location, upload a photo.'},
+            {n:'03',title:'Hash Generated',desc:'Spring Boot creates a SHA-256 hash linking your report to the previous one.'},
+            {n:'04',title:'Stored in MySQL',desc:'Saved with hash, location, submitter info, and status.'},
+            {n:'05',title:'Admin Reviews',desc:'Admin updates status (Pending → In Progress → Completed) and manages the chain.'},
+          ].map((s)=>(
             <div key={s.n} className="land-step">
               <div className="land-step-num">{s.n}</div>
-              <div className="land-step-title">{s.title}</div>
-              <div className="land-step-desc">{s.desc}</div>
-              {i<5 && <div className="land-step-arrow">→</div>}
+              <div>
+                <div className="land-step-title">{s.title}</div>
+                <div className="land-step-desc">{s.desc}</div>
+              </div>
             </div>
           ))}
         </div>
@@ -168,15 +151,13 @@ function LandingPage({ onGetStarted }) {
         <h2 className="land-section-title">Built With</h2>
         <div className="land-techs">
           {[
-            {icon:'⚛️',name:'React',desc:'Frontend UI'},
-            {icon:'☕',name:'Spring Boot',desc:'Java Backend'},
-            {icon:'🐬',name:'MySQL',desc:'Database'},
-            {icon:'🤗',name:'HF BLIP',desc:'AI Vision Model'},
-            {icon:'🔐',name:'SHA-256',desc:'Hash Algorithm'},
-            {icon:'📍',name:'OpenStreetMap',desc:'GPS Geocoding'},
+            {name:'React',desc:'Frontend UI'},
+            {name:'Spring Boot',desc:'Java Backend'},
+            {name:'MySQL',desc:'Database'},
+            {name:'SHA-256',desc:'Hash Algorithm'},
+            {name:'OpenStreetMap',desc:'GPS Geocoding'},
           ].map(t=>(
             <div key={t.name} className="land-tech-card">
-              <div className="land-tech-icon">{t.icon}</div>
               <div className="land-tech-name">{t.name}</div>
               <div className="land-tech-desc">{t.desc}</div>
             </div>
@@ -188,18 +169,17 @@ function LandingPage({ onGetStarted }) {
         <div className="land-section-tag">Creator</div>
         <h2 className="land-section-title">About the Developer</h2>
         <div className="creator-card">
-          <div className="creator-avatar">👨‍💻</div>
           <div className="creator-info">
             <div className="creator-name">{CREATOR.name}</div>
             <div className="creator-role">Full Stack Developer · AWARE Project</div>
             <div className="creator-bio">
-              Built AWARE as a civic technology project combining blockchain-inspired data integrity,
-              Hugging Face AI image analysis via Spring Boot, and real-time status tracking to help
-              citizens report and track local infrastructure issues effectively.
+              Built AWARE as a civic technology project combining blockchain-inspired data integrity
+              with real-time status tracking, to help citizens report and track local infrastructure
+              issues effectively.
             </div>
             <div className="creator-contacts">
-              <a className="creator-contact" href={`mailto:${CREATOR.email}`}>✉️ {CREATOR.email}</a>
-              <a className="creator-contact" href={`tel:${CREATOR.phone}`}>📞 {CREATOR.phone}</a>
+              <a className="creator-contact" href={`mailto:${CREATOR.email}`}>{CREATOR.email}</a>
+              <a className="creator-contact" href={`tel:${CREATOR.phone}`}>{CREATOR.phone}</a>
             </div>
           </div>
         </div>
@@ -209,12 +189,12 @@ function LandingPage({ onGetStarted }) {
         <h2 className="land-cta-title">Ready to Make a Difference?</h2>
         <p className="land-cta-desc">Join AWARE and start reporting civic issues in your area today.</p>
         <button className="btn-land-primary btn-land-primary--lg" onClick={onGetStarted}>
-          🚀 Get Started — It's Free
+          Get Started — It's Free
         </button>
       </section>
 
       <footer className="land-footer">
-        <div className="land-footer-logo">🔗 AWARE</div>
+        <div className="land-footer-logo">AWARE</div>
         <div className="land-footer-sub">Advanced Web-based Application for Reporting Events</div>
         <div className="land-footer-sub" style={{marginTop:'.3rem'}}>
           Built by {CREATOR.name} · {CREATOR.email} · {CREATOR.phone}
@@ -268,8 +248,7 @@ function AuthModal({ onLogin, onSignup }) {
     <div className="modal-overlay">
       <div className="modal">
         <div className="modal-logo">
-          <div className="modal-logo-icon">🔗</div>
-          <div className="modal-logo-text">AWARE</div>
+            <div className="modal-logo-text">AWARE</div>
           <div className="modal-logo-sub">Advanced Web-based Application for Reporting Events</div>
         </div>
         <div className="role-tabs">
@@ -278,8 +257,8 @@ function AuthModal({ onLogin, onSignup }) {
         </div>
         {tab==='login' && (
           <div className="role-tabs" style={{marginBottom:'1rem'}}>
-            <button className={`role-tab ${role==='user'?'role-tab--active':''}`} onClick={()=>setRole('user')}>👤 User</button>
-            <button className={`role-tab role-tab--admin ${role==='admin'?'role-tab--active':''}`} onClick={()=>setRole('admin')}>🛡️ Admin</button>
+            <button className={`role-tab ${role==='user'?'role-tab--active':''}`} onClick={()=>setRole('user')}>User</button>
+            <button className={`role-tab role-tab--admin ${role==='admin'?'role-tab--active':''}`} onClick={()=>setRole('admin')}>Admin</button>
           </div>
         )}
         {tab==='login' && (
@@ -287,7 +266,7 @@ function AuthModal({ onLogin, onSignup }) {
             {role==='admin' ? <><strong>Admin:</strong> admin / admin123</> : <>Sign up to create a user account</>}
           </div>
         )}
-        {error && <div className="modal-error">⚠ {error}</div>}
+        {error && <div className="modal-error">{error}</div>}
 
         {tab==='login' ? (
           <>
@@ -300,7 +279,7 @@ function AuthModal({ onLogin, onSignup }) {
                 onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleLogin()}/>
             </div>
             <button className={`btn-primary ${role==='admin'?'btn-primary--amber':''}`} onClick={handleLogin}>
-              {role==='admin' ? '🛡️ Login as Admin' : '👤 Login'}
+              {role==='admin' ? 'Login as Admin' : 'Login'}
             </button>
             <p className="modal-switch" onClick={()=>{setTab('signup');reset();}}>Don't have an account? <span>Sign Up →</span></p>
           </>
@@ -319,7 +298,7 @@ function AuthModal({ onLogin, onSignup }) {
               <input className="field-input" type="password" placeholder="Repeat password" value={password2}
                 onChange={e=>setPassword2(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleSignup()}/>
             </div>
-            <button className="btn-primary" onClick={handleSignup}>✅ Create Account</button>
+            <button className="btn-primary" onClick={handleSignup}>Create Account</button>
             <p className="modal-switch" onClick={()=>{setTab('login');reset();}}>Already have an account? <span>Login →</span></p>
           </>
         )}
@@ -340,7 +319,7 @@ function StatusBadge({ status }) {
 }
 
 // ─── REPORT CARD ──────────────────────────────────────────────────────────────
-function ReportCard({ report, delay, isAdmin, onStatusUpdate, onDelete }) {
+function ReportCard({ report, isAdmin, onStatusUpdate, onDelete }) {
   const [sel,      setSel]      = useState(report.status || 'PENDING');
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -357,7 +336,7 @@ function ReportCard({ report, delay, isAdmin, onStatusUpdate, onDelete }) {
   const handleDelete = async () => { if(!window.confirm(`Delete Report #${report.id}?`))return; setDeleting(true); await onDelete(report.id); setDeleting(false); };
 
   return (
-    <div className="report-card" style={{ animationDelay:`${delay}ms` }}>
+    <div className="report-card" data-report-id={`#${report.id ?? '—'}`}>
       <div className="card-img-wrap">
         {report.image
           ? <img src={`data:image/jpeg;base64,${report.image}`} alt="issue" className="card-img"/>
@@ -373,22 +352,17 @@ function ReportCard({ report, delay, isAdmin, onStatusUpdate, onDelete }) {
         {report.submittedBy && (
           <>
             <div className="card-submitter" onClick={()=>setShowUser(!showUser)}>
-              <span className="submitter-icon">👤</span>
               <span className="submitter-name">{report.submittedBy}</span>
               {report.submitterEmail && <span className="submitter-toggle">{showUser?'▲':'▼'}</span>}
             </div>
             {showUser && report.submitterEmail && (
-              <div className="submitter-detail">📧 {report.submitterEmail}</div>
+              <div className="submitter-detail">{report.submitterEmail}</div>
             )}
           </>
         )}
 
         {report.location && (
-          <div className="card-location"><span className="loc-icon">📍</span><span>{report.location}</span></div>
-        )}
-
-        {report.aiLabel && (
-          <div className="card-ai-label">🤖 {report.aiLabel}</div>
+          <div className="card-location"><span>{report.location}</span></div>
         )}
 
         <div className="hash-block">
@@ -405,23 +379,23 @@ function ReportCard({ report, delay, isAdmin, onStatusUpdate, onDelete }) {
         {isAdmin && (
           <div className="status-update-row">
             <select className="status-select" value={sel} onChange={e=>setSel(e.target.value)}>
-              <option value="PENDING">⏳ Pending</option>
-              <option value="IN_PROGRESS">🔄 In Progress</option>
-              <option value="COMPLETED">✅ Completed</option>
-              <option value="REJECTED">❌ Rejected</option>
+              <option value="PENDING">Pending</option>
+              <option value="IN_PROGRESS">In Progress</option>
+              <option value="COMPLETED">Completed</option>
+              <option value="REJECTED">Rejected</option>
             </select>
             <button className="btn-status-update" onClick={handleUpdate} disabled={updating||sel===report.status}>
               {updating ? <span className="spinner"/> : 'Update'}
             </button>
             <button className="btn-delete-single" onClick={handleDelete} disabled={deleting} title="Delete">
-              {deleting ? <span className="spinner"/> : '🗑️'}
+              {deleting ? <span className="spinner"/> : 'Delete'}
             </button>
           </div>
         )}
 
         <div className="card-footer">
-          <span className="report-id">⛓ Report #{report.id || '—'}</span>
-          <span className="chain-link-indicator">✓ Chain Linked</span>
+          <span className="report-id">Report #{report.id || '—'}</span>
+          <span className="chain-link-indicator">Chain Linked</span>
         </div>
       </div>
     </div>
@@ -429,7 +403,7 @@ function ReportCard({ report, delay, isAdmin, onStatusUpdate, onDelete }) {
 }
 
 // ─── UPLOAD ZONE ──────────────────────────────────────────────────────────────
-function UploadZone({ onFileSelect, fileName, previewUrl, aiResult, analyzing }) {
+function UploadZone({ onFileSelect, fileName, previewUrl }) {
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef();
   const handleDrop = (e) => {
@@ -439,28 +413,17 @@ function UploadZone({ onFileSelect, fileName, previewUrl, aiResult, analyzing })
   };
   return (
     <div className="field">
-      <label className="field-label">Upload Image <span className="field-label--muted">(optional · AI analyzed by Hugging Face BLIP)</span></label>
+      <label className="field-label">Upload Image <span className="field-label--muted">(optional)</span></label>
       <div className={`upload-zone ${dragging?'upload-zone--drag':''}`}
         onDragOver={e=>{e.preventDefault();setDragging(true);}} onDragLeave={()=>setDragging(false)}
         onDrop={handleDrop} onClick={()=>inputRef.current.click()}>
         <input ref={inputRef} type="file" accept="image/*" style={{display:'none'}}
           onChange={e=>{ const f=e.target.files[0]; if(f) onFileSelect(f); }}/>
-        <div className="upload-icon-wrap">📷</div>
         <div className="upload-main-text">Drop image here or <span className="highlight">browse</span></div>
-        <div className="upload-sub-text">PNG, JPG up to 10MB · Hugging Face BLIP will describe the issue</div>
-        {fileName && <div className="upload-filename">✓ {fileName}</div>}
+        <div className="upload-sub-text">PNG, JPG up to 10MB</div>
+        {fileName && <div className="upload-filename">{fileName}</div>}
         {previewUrl && <img src={previewUrl} alt="preview" className="preview-img"/>}
       </div>
-      {analyzing && (
-        <div className="ai-result ai-result--loading">
-          🤖 Sending image to Hugging Face via Spring Boot... check IntelliJ console for [AI] logs
-        </div>
-      )}
-      {!analyzing && aiResult && (
-        <div className="ai-result">
-          🤖 <strong>{aiResult}</strong>
-        </div>
-      )}
     </div>
   );
 }
@@ -474,8 +437,6 @@ function ReportForm({ onSubmit, loading, currentUser }) {
   const [file,        setFile]        = useState(null);
   const [fileName,    setFileName]    = useState('');
   const [previewUrl,  setPreviewUrl]  = useState('');
-  const [aiResult,    setAiResult]    = useState('');
-  const [analyzing,   setAnalyzing]   = useState(false);
 
   const detectLocation = () => {
     if (!navigator.geolocation) { setLocation('Geolocation not supported'); return; }
@@ -494,57 +455,38 @@ function ReportForm({ onSubmit, loading, currentUser }) {
     );
   };
 
-  const handleFileSelect = async (f) => {
+  const handleFileSelect = (f) => {
     setFile(f); setFileName(f.name);
     setPreviewUrl(URL.createObjectURL(f));
-    setAiResult(''); setAnalyzing(true);
-
-    try {
-      const result = await analyzeImageWithAI(f);
-      // Always show whatever the backend returned — even raw labels
-      // Check Spring Boot terminal for [AI] logs to see exactly what HF returned
-      if (result && result.trim() !== '') {
-        setAiResult(result.trim());
-      } else {
-        // Backend returned empty — model was still loading after retry
-        // User should wait a few seconds and re-upload the image
-        setAiResult('Model warming up — please re-upload the image in 10 seconds');
-      }
-    } catch (e) {
-      setAiResult('Spring Boot offline — start it on :8080 first');
-    } finally {
-      setAnalyzing(false);
-    }
   };
 
   const handleSubmit = () => {
     onSubmit(
       {
         issueType, description, location, file,
-        aiLabel: aiResult,
         submittedBy: currentUser.username,
         submitterEmail: currentUser.email || ''
       },
       () => {
         setIssueType(''); setDescription(''); setLocation('');
-        setFile(null); setFileName(''); setPreviewUrl(''); setAiResult(''); setAnalyzing(false);
+        setFile(null); setFileName(''); setPreviewUrl('');
       }
     );
   };
 
   return (
     <div className="form-card">
-      <div className="form-card-title"><div className="icon-box">📋</div>Submit a New Report</div>
+      <div className="form-card-title">Submit a New Report</div>
 
       <div className="field"><label className="field-label">Issue Type</label>
         <select className="field-input" value={issueType} onChange={e=>setIssueType(e.target.value)}>
           <option value="">Select issue type...</option>
-          <option value="Road Damage">🛣️ Road Damage</option>
-          <option value="Garbage">🗑️ Garbage / Waste</option>
-          <option value="Water Leakage">💧 Water Leakage</option>
-          <option value="Street Light">💡 Street Light Issue</option>
-          <option value="Drainage">🌀 Drainage Blockage</option>
-          <option value="Other">📌 Other</option>
+          <option value="Road Damage">Road Damage</option>
+          <option value="Garbage">Garbage / Waste</option>
+          <option value="Water Leakage">Water Leakage</option>
+          <option value="Street Light">Street Light Issue</option>
+          <option value="Drainage">Drainage Blockage</option>
+          <option value="Other">Other</option>
         </select>
       </div>
 
@@ -560,26 +502,24 @@ function ReportForm({ onSubmit, loading, currentUser }) {
           <input className="field-input" type="text" placeholder="e.g. MG Road, Block 4, Near City Park..."
             value={location} onChange={e=>setLocation(e.target.value)}/>
           <button className="btn-locate" onClick={detectLocation} disabled={detecting}>
-            {detecting ? <span className="spinner" style={{width:12,height:12}}/> : '📍'} Detect
+            {detecting ? <span className="spinner" style={{width:12,height:12}}/> : 'Detect'}
           </button>
         </div>
       </div>
 
-      <UploadZone onFileSelect={handleFileSelect} fileName={fileName} previewUrl={previewUrl} aiResult={aiResult} analyzing={analyzing}/>
+      <UploadZone onFileSelect={handleFileSelect} fileName={fileName} previewUrl={previewUrl}/>
 
-      <button className="btn-submit" disabled={loading || analyzing} onClick={handleSubmit}>
+      <button className="btn-submit" disabled={loading} onClick={handleSubmit}>
         {loading
           ? <><span className="spinner"/> Hashing &amp; Submitting...</>
-          : analyzing
-          ? '⏳ Waiting for AI analysis...'
           : 'Submit Report & Generate Hash'
         }
       </button>
 
       <div className="form-footer">
-        <div className="feature-chip"><div className="dot-c dot-c--blue"/>SHA-256</div>
-        <div className="feature-chip"><div className="dot-c dot-c--violet"/>Chain Linked</div>
-        <div className="feature-chip"><div className="dot-c dot-c--green"/>HF BLIP AI</div>
+        <div className="feature-chip">SHA-256</div>
+        <div className="feature-chip">Chain Linked</div>
+        <div className="feature-chip">MySQL</div>
       </div>
     </div>
   );
@@ -607,13 +547,12 @@ function UserManagement() {
     <div className="user-mgmt">
       <div className="section-head" style={{marginBottom:'1rem'}}>
         <div className="section-title" style={{fontSize:'1.2rem'}}>
-          👥 Registered Users <span className="count-badge">{users.length}</span>
+          Registered Users <span className="count-badge">{users.length}</span>
         </div>
-        <button className="nav-btn" onClick={()=>setUsersState(loadUsers())}>↻ Refresh</button>
+        <button className="nav-btn" onClick={()=>setUsersState(loadUsers())}>Refresh</button>
       </div>
       {users.length === 0 ? (
         <div className="empty-state" style={{padding:'2rem',gridColumn:'auto'}}>
-          <div className="empty-icon-wrap" style={{width:50,height:50,fontSize:'1.3rem',margin:'0 auto .8rem'}}>👤</div>
           <div className="empty-title" style={{fontSize:'1rem'}}>No users signed up yet</div>
         </div>
       ) : (
@@ -622,7 +561,7 @@ function UserManagement() {
             <div key={u.id} className="user-row">
               {editingId===u.id ? (
                 <>
-                  <div className="user-avatar">✏️</div>
+                  
                   <div className="user-fields">
                     <input className="field-input" style={{marginBottom:4,padding:'4px 8px',fontSize:'.8rem'}}
                       value={editName} onChange={e=>setEditName(e.target.value)} placeholder="Username"/>
@@ -630,13 +569,12 @@ function UserManagement() {
                       value={editEmail} onChange={e=>setEditEmail(e.target.value)} placeholder="Email"/>
                   </div>
                   <div style={{display:'flex',gap:6}}>
-                    <button className="btn-status-update" onClick={saveEdit}>💾 Save</button>
-                    <button className="btn-delete-single" onClick={()=>setEditingId(null)}>✕</button>
+                    <button className="btn-status-update" onClick={saveEdit}>Save</button>
+                    <button className="btn-delete-single" onClick={()=>setEditingId(null)}>Cancel</button>
                   </div>
                 </>
               ) : (
                 <>
-                  <div className="user-avatar">👤</div>
                   <div className="user-info">
                     <div className="user-name">{u.username}</div>
                     <div className="user-email">{u.email||'No email'}</div>
@@ -644,8 +582,8 @@ function UserManagement() {
                   </div>
                   <div className="user-badge">USER</div>
                   <div style={{display:'flex',gap:6}}>
-                    <button className="btn-status-update" onClick={()=>startEdit(u)}>✏️ Edit</button>
-                    <button className="btn-delete-single" onClick={()=>deleteUser(u.id)}>🗑️</button>
+                    <button className="btn-status-update" onClick={()=>startEdit(u)}>Edit</button>
+                    <button className="btn-delete-single" onClick={()=>deleteUser(u.id)}>Delete</button>
                   </div>
                 </>
               )}
@@ -678,8 +616,8 @@ function AdminDashboard({ reports, onStatusUpdate, onDelete, onDeleteAll, onRefr
       </div>
 
       <div className="admin-tabs">
-        <button className={`admin-tab ${activeTab==='reports'?'admin-tab--active':''}`} onClick={()=>setActiveTab('reports')}>📋 Reports</button>
-        <button className={`admin-tab ${activeTab==='users'?'admin-tab--active':''}`} onClick={()=>setActiveTab('users')}>👥 Users</button>
+        <button className={`admin-tab ${activeTab==='reports'?'admin-tab--active':''}`} onClick={()=>setActiveTab('reports')}>Reports</button>
+        <button className={`admin-tab ${activeTab==='users'?'admin-tab--active':''}`} onClick={()=>setActiveTab('users')}>Users</button>
       </div>
 
       <section className="reports-section">
@@ -687,27 +625,25 @@ function AdminDashboard({ reports, onStatusUpdate, onDelete, onDeleteAll, onRefr
           <>
             {reports.length>0 && (
               <div className="integrity-bar">
-                <span>⛓️</span>
-                <span>Hash chain verified — {reports.length} record{reports.length!==1?'s':''} intact</span>
+                    <span>Hash chain verified — {reports.length} record{reports.length!==1?'s':''} intact</span>
               </div>
             )}
             <div className="section-head">
               <div className="section-title">All Reports <span className="count-badge">{reports.length}</span></div>
               <div style={{display:'flex',gap:'.6rem'}}>
-                <button className="nav-btn" onClick={onRefresh}>↻ Refresh</button>
-                {reports.length>0 && <button className="btn-danger" onClick={onDeleteAll}>🗑️ Delete All &amp; Reset</button>}
+                <button className="nav-btn" onClick={onRefresh}>Refresh</button>
+                {reports.length>0 && <button className="btn-danger" onClick={onDeleteAll}>Delete All &amp; Reset</button>}
               </div>
             </div>
             {reports.length===0 ? (
               <div className="reports-grid"><div className="empty-state">
-                <div className="empty-icon-wrap">📋</div>
                 <div className="empty-title">No Reports</div>
                 <div className="empty-sub">Users haven't submitted any reports yet</div>
               </div></div>
             ) : (
               <div className="reports-grid">
                 {reports.map((r,i)=>(
-                  <ReportCard key={r.id??i} report={r} delay={i*40} isAdmin={true}
+                  <ReportCard key={r.id??i} report={r} isAdmin={true}
                     onStatusUpdate={onStatusUpdate} onDelete={onDelete}/>
                 ))}
               </div>
@@ -727,15 +663,15 @@ function UserDashboard({ reports, onSubmit, loading, currentUser }) {
     <>
       <section className="hero">
         <div className="hero-left">
-          <div className="hero-eyebrow">🔗 Blockchain-Inspired Integrity</div>
+          <div className="hero-eyebrow">Blockchain-Inspired Integrity</div>
           <h1 className="hero-title">Report Civic Issues.<br/><span className="hero-title__accent">Verified &amp; Immutable.</span></h1>
-          <p className="hero-desc">Every report is cryptographically hashed with SHA-256 and linked to the previous entry — a tamper-proof chain powered by Hugging Face BLIP AI image analysis.</p>
+          <p className="hero-desc">Every report is cryptographically hashed with SHA-256 and linked to the previous entry — a tamper-proof chain stored in MySQL.</p>
           <div className="tech-badges">
-            {['Spring Boot','MySQL','SHA-256','HF BLIP AI','Hash Chain'].map(b=><span key={b} className="tech-badge">{b}</span>)}
+            {['Spring Boot','MySQL','SHA-256','Hash Chain'].map(b=><span key={b} className="tech-badge">{b}</span>)}
           </div>
           <div className="hero-stats">
             <div className="stat"><div className="stat-num">{reports.length||'—'}</div><div className="stat-label">Reports Filed</div></div>
-            <div className="stat"><div className="stat-num" style={{color:'var(--green)'}}>✓</div><div className="stat-label">Chain Valid</div></div>
+            <div className="stat"><div className="stat-num">OK</div><div className="stat-label">Chain Valid</div></div>
             <div className="stat"><div className="stat-num">256</div><div className="stat-label">SHA Bits</div></div>
           </div>
         </div>
@@ -745,7 +681,6 @@ function UserDashboard({ reports, onSubmit, loading, currentUser }) {
       <section className="reports-section">
         {reports.length>0 && (
           <div className="integrity-bar">
-            <span>⛓️</span>
             <span>Hash chain verified — {reports.length} record{reports.length!==1?'s':''} intact</span>
           </div>
         )}
@@ -754,14 +689,13 @@ function UserDashboard({ reports, onSubmit, loading, currentUser }) {
         </div>
         {reports.length===0 ? (
           <div className="reports-grid"><div className="empty-state">
-            <div className="empty-icon-wrap">📋</div>
-            <div className="empty-title">No Reports Yet</div>
+              <div className="empty-title">No Reports Yet</div>
             <div className="empty-sub">Submit your first civic issue above to start the chain</div>
           </div></div>
         ) : (
           <div className="reports-grid">
             {reports.map((r,i)=>(
-              <ReportCard key={r.id??i} report={r} delay={i*40} isAdmin={false}
+              <ReportCard key={r.id??i} report={r} isAdmin={false}
                 onStatusUpdate={()=>{}} onDelete={()=>{}}/>
             ))}
           </div>
@@ -809,7 +743,7 @@ function App() {
   const handleLogin  = (user) => { setCurrentUser(user); setScreen('app'); };
   const handleSignup = (user) => { showToast(`Account created for ${user.username}! Now login.`,'success'); };
 
-  const handleSubmit = async ({issueType,description,location,file,aiLabel,submittedBy,submitterEmail}, resetForm) => {
+  const handleSubmit = async ({issueType,description,location,file,submittedBy,submitterEmail}, resetForm) => {
     if (!issueType)          { showToast('Please select an issue type','error'); return; }
     if (!description.trim()) { showToast('Please add a description','error');    return; }
     setLoading(true);
@@ -820,7 +754,6 @@ function App() {
       fd.append('submittedBy', submittedBy||'');
       fd.append('submitterEmail', submitterEmail||'');
       if (location) fd.append('location', location);
-      if (aiLabel)  fd.append('aiLabel',  aiLabel);
       if (file)     fd.append('image',    file);
       const res = await fetch(API, {method:'POST',body:fd});
       if (res.ok) { showToast('Report submitted & chained!','success'); resetForm(); loadReports(); }
@@ -829,7 +762,7 @@ function App() {
       showToast('Demo mode — start Spring Boot on :8080','info');
       setReports(prev=>[{
         id:Date.now(), issueType, description, location,
-        aiLabel:aiLabel||null, submittedBy, submitterEmail,
+        submittedBy, submitterEmail,
         status:'PENDING', hash:generateFakeHash(), previousHash:'0'.repeat(64), image:null
       },...prev]);
       resetForm();
@@ -853,7 +786,7 @@ function App() {
   };
 
   const handleDeleteAll = async () => {
-    if (!window.confirm('⚠️ Delete ALL reports and reset the hash chain?')) return;
+    if (!window.confirm('Delete ALL reports and reset the hash chain?')) return;
     try {
       const res = await fetch(`${API}/all`,{method:'DELETE'});
       if (res.ok) { setReports([]); showToast('All reports deleted. Chain reset!','success'); }
@@ -869,7 +802,6 @@ function App() {
       <div className="orb orb--1"/><div className="orb orb--2"/>
       <nav className="navbar">
         <div className="logo-wrap">
-          <div className="logo-icon">🔗</div>
           <div>
             <div className="logo-text">AWARE</div>
             <div className="logo-sub">Advanced Web-based Application for Reporting Events</div>
@@ -884,7 +816,7 @@ function App() {
             <div className={`role-dot ${isAdmin?'role-dot--admin':'role-dot--user'}`}/>
             <span>{currentUser.username} ({currentUser.role})</span>
           </div>
-          <button className="nav-btn" onClick={()=>setScreen('landing')}>🏠 Home</button>
+          <button className="nav-btn" onClick={()=>setScreen('landing')}>Home</button>
           <button className="nav-logout" onClick={()=>{setCurrentUser(null);setScreen('landing');}}>Logout</button>
         </div>
       </nav>
