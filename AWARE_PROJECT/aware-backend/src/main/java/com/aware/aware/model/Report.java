@@ -33,6 +33,13 @@ public class Report {
     @Column(nullable = false)
     private ReportStatus status = ReportStatus.PENDING;
 
+    @org.hibernate.annotations.CreationTimestamp
+    @Column(nullable = false, updatable = false)
+    private java.time.LocalDateTime createdAt;
+
+    private Double latitude;
+    private Double longitude;
+
     public enum ReportStatus { PENDING, IN_PROGRESS, COMPLETED, REJECTED }
 
     // ─── Getters & Setters ────────────────────────────────────────────────
@@ -56,4 +63,13 @@ public class Report {
     public void   setSubmitterEmail(String v) { this.submitterEmail = v; }
     public ReportStatus getStatus()           { return status; }
     public void   setStatus(ReportStatus v)   { this.status = v; }
+
+    public java.time.LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(java.time.LocalDateTime v) { this.createdAt = v; }
+
+    public Double getLatitude() { return latitude; }
+    public void setLatitude(Double v) { this.latitude = v; }
+
+    public Double getLongitude() { return longitude; }
+    public void setLongitude(Double v) { this.longitude = v; }
 }

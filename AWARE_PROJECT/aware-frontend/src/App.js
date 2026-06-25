@@ -9,18 +9,6 @@ const API = 'https://aware-backend-38v2.onrender.com/api/reports';
 // ─── CREATOR INFO ─────────────────────────────────────────────────────────────
 const CREATOR = { name: 'Kuldeep Singh', email: 'ks14635142@gmail.com', phone: '6377328251' };
 
-// ─── ADMIN CREDENTIAL ────────────────────────────────────────────────────────
-const ADMIN = { username: 'admin', password: 'admin123', role: 'ADMIN' };
-
-// ─── LOCALSTORAGE HELPERS ─────────────────────────────────────────────────────
-function loadUsers() {
-  try { return JSON.parse(localStorage.getItem('aware_users') || '[]'); }
-  catch { return []; }
-}
-function saveUsers(users) {
-  localStorage.setItem('aware_users', JSON.stringify(users));
-}
-
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 function getTypeClass(type) {
   if (!type) return 'type-default';
@@ -49,6 +37,66 @@ const STATUS_LABELS = {
 };
 function generateFakeHash() {
   return Array.from({length:64}, () => Math.floor(Math.random()*16).toString(16)).join('');
+}
+
+// ─── INTERACTIVE MAP COMPONENT (LEAFLET) ──────────────────────────────────────
+function IssueMap({ reports }) {
+  const mapRef = React.useRef(null);
+  const mapInstanceRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!window.L || !mapRef.current) return;
+
+    // Filter reports with valid coordinates
+    const mappedReports = reports.filter(r => r.latitude != null && r.longitude != null);
+
+    // Center map on the first coordinates, or default to center of India
+    const defaultCenter = mappedReports.length > 0
+      ? [mappedReports[0].latitude, mappedReports[0].longitude]
+      : [20.5937, 78.9629];
+
+    if (!mapInstanceRef.current) {
+      mapInstanceRef.current = window.L.map(mapRef.current).setView(defaultCenter, mappedReports.length > 0 ? 12 : 5);
+      window.L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20
+      }).addTo(mapInstanceRef.current);
+    } else {
+      if (mappedReports.length > 0) {
+        mapInstanceRef.current.setView(defaultCenter, 12);
+      }
+    }
+
+    // Clear old markers
+    mapInstanceRef.current.eachLayer(layer => {
+      if (layer instanceof window.L.Marker) {
+        mapInstanceRef.current.removeLayer(layer);
+      }
+    });
+
+    // Add new markers
+    mappedReports.forEach(r => {
+      const marker = window.L.marker([r.latitude, r.longitude]).addTo(mapInstanceRef.current);
+      marker.bindPopup(`
+        <div style="font-family: sans-serif; color: #111; min-width: 120px;">
+          <h4 style="margin: 0 0 4px; font-weight: 700; color: #10b981;">${r.issueType || 'Civic Issue'}</h4>
+          <p style="margin: 0 0 6px; font-size: 11px; line-height: 1.4;">${r.description || ''}</p>
+          <div style="font-size: 10px; color: #666; font-weight: 600;">Status: ${r.status || 'PENDING'}</div>
+        </div>
+      `);
+    });
+  }, [reports]);
+
+  return (
+    <div className="map-container-wrap">
+      <div className="map-title-bar">
+        <span className="map-title-icon">🗺️</span>
+        <span className="map-title-text">Live Issue Geolocation Map</span>
+      </div>
+      <div ref={mapRef} className="leaflet-map-div" />
+    </div>
+  );
 }
 
 // ─── TOAST ───────────────────────────────────────────────────────────────────
@@ -214,40 +262,64 @@ function LandingPage({ onGetStarted }) {
 // ─── AUTH MODAL ───────────────────────────────────────────────────────────────
 function AuthModal({ onLogin, onSignup }) {
   const [tab,       setTab]       = useState('login');
-  const [role,      setRole]      = useState('user');
   const [username,  setUsername]  = useState('');
   const [password,  setPassword]  = useState('');
   const [password2, setPassword2] = useState('');
   const [email,     setEmail]     = useState('');
   const [error,     setError]     = useState('');
+  const [loading,   setLoading]   = useState(false);
 
   const reset = () => { setUsername(''); setPassword(''); setPassword2(''); setEmail(''); setError(''); };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     setError('');
-    if (role === 'admin') {
-      if (username === ADMIN.username && password === ADMIN.password) { onLogin({username, role:'ADMIN'}); }
-      else setError('Invalid admin credentials.');
-      return;
+    if (!username.trim() || !password.trim()) { setError('All fields required.'); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(`${API.replace('/reports', '/auth')}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username.trim(), password })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        onLogin(data); // returns { token, username, email, role }
+      } else {
+        const text = await res.text();
+        setError(text || 'Invalid username or password.');
+      }
+    } catch {
+      setError('Connection to backend failed.');
+    } finally {
+      setLoading(false);
     }
-    const users = loadUsers();
-    const found = users.find(u => u.username === username && u.password === password);
-    if (found) { onLogin({ username: found.username, email: found.email, role:'USER' }); }
-    else setError('User not found. Please sign up first.');
   };
 
-  const handleSignup = () => {
+  const handleSignup = async () => {
     setError('');
-    if (!username.trim())   { setError('Username is required.'); return; }
-    if (!email.trim())      { setError('Email is required.'); return; }
-    if (password.length<6)  { setError('Password min 6 characters.'); return; }
-    if (password!==password2){ setError('Passwords do not match.'); return; }
-    const users = loadUsers();
-    if (users.find(u=>u.username===username)) { setError('Username already taken.'); return; }
-    const newUser = { id:Date.now(), username:username.trim(), password, email:email.trim(), joinedAt:new Date().toISOString() };
-    saveUsers([...users, newUser]);
-    onSignup(newUser);
-    setTab('login'); reset();
+    if (!username.trim() || !email.trim() || !password.trim()) { setError('All fields required.'); return; }
+    if (password.length < 6) { setError('Password min 6 characters.'); return; }
+    if (password !== password2) { setError('Passwords do not match.'); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(`${API.replace('/reports', '/auth')}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username.trim(), email: email.trim(), password })
+      });
+      if (res.ok) {
+        onSignup({ username: username.trim() });
+        setTab('login');
+        reset();
+      } else {
+        const text = await res.text();
+        setError(text || 'Signup failed.');
+      }
+    } catch {
+      setError('Connection to backend failed.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -263,14 +335,8 @@ function AuthModal({ onLogin, onSignup }) {
           <button className={`role-tab ${tab==='signup'?'role-tab--active':''}`} onClick={()=>{setTab('signup');reset();}}>Sign Up</button>
         </div>
         {tab==='login' && (
-          <div className="role-tabs" style={{marginBottom:'1rem'}}>
-            <button className={`role-tab ${role==='user'?'role-tab--active':''}`} onClick={()=>setRole('user')}>👤 User</button>
-            <button className={`role-tab role-tab--admin ${role==='admin'?'role-tab--active':''}`} onClick={()=>setRole('admin')}>🛡️ Admin</button>
-          </div>
-        )}
-        {tab==='login' && (
           <div className="modal-hint">
-            {role==='admin' ? <><strong>Admin:</strong> admin / admin123</> : <>Sign up to create a user account</>}
+            Login to report civic issues and verify the hash chain integrity.
           </div>
         )}
         {error && <div className="modal-error">⚠ {error}</div>}
@@ -285,8 +351,8 @@ function AuthModal({ onLogin, onSignup }) {
               <input className="field-input" type="password" placeholder="••••••••" value={password}
                 onChange={e=>setPassword(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleLogin()}/>
             </div>
-            <button className={`btn-primary ${role==='admin'?'btn-primary--amber':''}`} onClick={handleLogin}>
-              {role==='admin' ? '🛡️ Login as Admin' : '👤 Login'}
+            <button className="btn-primary" onClick={handleLogin} disabled={loading}>
+              {loading ? <span className="spinner" /> : '👤 Login'}
             </button>
             <p className="modal-switch" onClick={()=>{setTab('signup');reset();}}>Don't have an account? <span>Sign Up →</span></p>
           </>
@@ -305,7 +371,9 @@ function AuthModal({ onLogin, onSignup }) {
               <input className="field-input" type="password" placeholder="Repeat password" value={password2}
                 onChange={e=>setPassword2(e.target.value)} onKeyDown={e=>e.key==='Enter'&&handleSignup()}/>
             </div>
-            <button className="btn-primary" onClick={handleSignup}>✅ Create Account</button>
+            <button className="btn-primary" onClick={handleSignup} disabled={loading}>
+              {loading ? <span className="spinner" /> : '✅ Create Account'}
+            </button>
             <p className="modal-switch" onClick={()=>{setTab('login');reset();}}>Already have an account? <span>Login →</span></p>
           </>
         )}
@@ -405,6 +473,11 @@ function ReportCard({ report, delay, isAdmin, onStatusUpdate, onDelete }) {
 
         <div className="card-footer">
           <span className="report-id">⛓ Report #{report.id || '—'}</span>
+          {report.createdAt && (
+            <span className="report-date" style={{ fontSize: '.68rem', color: 'var(--muted)' }}>
+              {new Date(report.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}
+            </span>
+          )}
           <span className="chain-link-indicator">✓ Chain Linked</span>
         </div>
       </div>
@@ -448,12 +521,16 @@ function ReportForm({ onSubmit, loading, currentUser }) {
   const [file,        setFile]        = useState(null);
   const [fileName,    setFileName]    = useState('');
   const [previewUrl,  setPreviewUrl]  = useState('');
+  const [latitude,    setLatitude]    = useState(null);
+  const [longitude,   setLongitude]   = useState(null);
 
   const detectLocation = () => {
     if (!navigator.geolocation) { setLocation('Geolocation not supported'); return; }
     setDetecting(true); setLocation('Detecting...');
     navigator.geolocation.getCurrentPosition(
       async ({ coords: { latitude, longitude } }) => {
+        setLatitude(latitude);
+        setLongitude(longitude);
         try {
           const res  = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`);
           const data = await res.json();
@@ -475,12 +552,14 @@ function ReportForm({ onSubmit, loading, currentUser }) {
     onSubmit(
       {
         issueType, description, location, file,
+        latitude, longitude,
         submittedBy: currentUser.username,
         submitterEmail: currentUser.email || ''
       },
       () => {
         setIssueType(''); setDescription(''); setLocation('');
         setFile(null); setFileName(''); setPreviewUrl('');
+        setLatitude(null); setLongitude(null);
       }
     );
   };
@@ -608,9 +687,8 @@ function UserManagement() {
 }
 
 // ─── ADMIN DASHBOARD ──────────────────────────────────────────────────────────
-function AdminDashboard({ reports, onStatusUpdate, onDelete, onDeleteAll, onRefresh }) {
+function AdminDashboard({ reports, onStatusUpdate, onDelete, onDeleteAll, onRefresh, onVerifyChain }) {
   const [activeTab, setActiveTab] = useState('reports');
-  const users      = loadUsers();
   const pending    = reports.filter(r=>r.status==='PENDING').length;
   const inProgress = reports.filter(r=>r.status==='IN_PROGRESS').length;
   const completed  = reports.filter(r=>r.status==='COMPLETED').length;
@@ -624,21 +702,23 @@ function AdminDashboard({ reports, onStatusUpdate, onDelete, onDeleteAll, onRefr
         <div className="admin-stat admin-stat--blue"><span className="admin-stat__num">{inProgress}</span><span className="admin-stat__label">In Progress</span></div>
         <div className="admin-stat admin-stat--green"><span className="admin-stat__num">{completed}</span><span className="admin-stat__label">Completed</span></div>
         <div className="admin-stat admin-stat--red"><span className="admin-stat__num">{rejected}</span><span className="admin-stat__label">Rejected</span></div>
-        <div className="admin-stat"><span className="admin-stat__num">{users.length}</span><span className="admin-stat__label">Users</span></div>
       </div>
 
       <div className="admin-tabs">
         <button className={`admin-tab ${activeTab==='reports'?'admin-tab--active':''}`} onClick={()=>setActiveTab('reports')}>📋 Reports</button>
-        <button className={`admin-tab ${activeTab==='users'?'admin-tab--active':''}`} onClick={()=>setActiveTab('users')}>👥 Users</button>
       </div>
 
       <section className="reports-section">
         {activeTab==='reports' ? (
           <>
+            <IssueMap reports={reports} />
             {reports.length>0 && (
-              <div className="integrity-bar">
-                <span>⛓️</span>
-                <span>Hash chain verified — {reports.length} record{reports.length!==1?'s':''} intact</span>
+              <div className="integrity-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span>⛓️</span>
+                  <span>Hash chain verified — {reports.length} record{reports.length!==1?'s':''} intact</span>
+                </div>
+                <button className="btn-verify-live" onClick={onVerifyChain}>🔍 Verify Live</button>
               </div>
             )}
             <div className="section-head">
@@ -663,16 +743,14 @@ function AdminDashboard({ reports, onStatusUpdate, onDelete, onDeleteAll, onRefr
               </div>
             )}
           </>
-        ) : (
-          <UserManagement/>
-        )}
+        ) : null}
       </section>
     </>
   );
 }
 
 // ─── USER DASHBOARD ───────────────────────────────────────────────────────────
-function UserDashboard({ reports, onSubmit, loading, currentUser }) {
+function UserDashboard({ reports, onSubmit, loading, currentUser, onVerifyChain }) {
   return (
     <>
       <section className="hero">
@@ -693,10 +771,14 @@ function UserDashboard({ reports, onSubmit, loading, currentUser }) {
       </section>
 
       <section className="reports-section">
+        <IssueMap reports={reports} />
         {reports.length>0 && (
-          <div className="integrity-bar">
-            <span>⛓️</span>
-            <span>Hash chain verified — {reports.length} record{reports.length!==1?'s':''} intact</span>
+          <div className="integrity-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span>⛓️</span>
+              <span>Hash chain verified — {reports.length} record{reports.length!==1?'s':''} intact</span>
+            </div>
+            <button className="btn-verify-live" onClick={onVerifyChain}>🔍 Verify Live</button>
           </div>
         )}
         <div className="section-head">
@@ -759,7 +841,22 @@ function App() {
   const handleLogin  = (user) => { setCurrentUser(user); setScreen('app'); };
   const handleSignup = (user) => { showToast(`Account created for ${user.username}! Now login.`,'success'); };
 
-  const handleSubmit = async ({issueType,description,location,file,submittedBy,submitterEmail}, resetForm) => {
+  const handleVerifyChain = async () => {
+    try {
+      const res = await fetch(`${API}/verify-chain`);
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      if (data.status === 'VALID') {
+        showToast(data.message, 'success');
+      } else {
+        showToast(data.message, 'error');
+      }
+    } catch {
+      showToast('Verify request failed. Start backend first.', 'error');
+    }
+  };
+
+  const handleSubmit = async ({issueType,description,location,file,latitude,longitude,submittedBy,submitterEmail}, resetForm) => {
     if (!issueType)          { showToast('Please select an issue type','error'); return; }
     if (!description.trim()) { showToast('Please add a description','error');    return; }
     setLoading(true);
@@ -767,17 +864,23 @@ function App() {
       const fd = new FormData();
       fd.append('issueType',   issueType);
       fd.append('description', description);
-      fd.append('submittedBy', submittedBy||'');
       fd.append('submitterEmail', submitterEmail||'');
       if (location) fd.append('location', location);
+      if (latitude) fd.append('latitude', latitude);
+      if (longitude) fd.append('longitude', longitude);
       if (file)     fd.append('image',    file);
-      const res = await fetch(API, {method:'POST',body:fd});
+      const res = await fetch(API, {
+        method:'POST',
+        headers: { 'Authorization': 'Bearer ' + currentUser.token },
+        body:fd
+      });
       if (res.ok) { showToast('Report submitted & chained!','success'); resetForm(); loadReports(); }
       else throw new Error();
     } catch {
       showToast('Demo mode — start Spring Boot on :8080','info');
       setReports(prev=>[{
         id:Date.now(), issueType, description, location,
+        latitude, longitude,
         submittedBy, submitterEmail,
         status:'PENDING', hash:generateFakeHash(), previousHash:'0'.repeat(64), image:null
       },...prev]);
@@ -787,7 +890,14 @@ function App() {
 
   const handleStatusUpdate = async (id, newStatus) => {
     try {
-      const res = await fetch(`${API}/${id}/status`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({status:newStatus})});
+      const res = await fetch(`${API}/${id}/status`,{
+        method:'PATCH',
+        headers:{
+          'Content-Type':'application/json',
+          'Authorization': 'Bearer ' + currentUser.token
+        },
+        body:JSON.stringify({status:newStatus})
+      });
       if (res.ok) { showToast(`Status → ${newStatus.replace('_',' ')}`, 'success'); setReports(prev=>prev.map(r=>r.id===id?{...r,status:newStatus}:r)); }
       else throw new Error();
     } catch { setReports(prev=>prev.map(r=>r.id===id?{...r,status:newStatus}:r)); showToast('Updated locally','info'); }
@@ -795,7 +905,10 @@ function App() {
 
   const handleDeleteSingle = async (id) => {
     try {
-      const res = await fetch(`${API}/${id}`,{method:'DELETE'});
+      const res = await fetch(`${API}/${id}`,{
+        method:'DELETE',
+        headers: { 'Authorization': 'Bearer ' + currentUser.token }
+      });
       if (res.ok) { setReports(prev=>prev.filter(r=>r.id!==id)); showToast('Report deleted','success'); }
       else throw new Error();
     } catch { setReports(prev=>prev.filter(r=>r.id!==id)); showToast('Deleted locally','info'); }
@@ -804,7 +917,10 @@ function App() {
   const handleDeleteAll = async () => {
     if (!window.confirm('⚠️ Delete ALL reports and reset the hash chain?')) return;
     try {
-      const res = await fetch(`${API}/all`,{method:'DELETE'});
+      const res = await fetch(`${API}/all`,{
+        method:'DELETE',
+        headers: { 'Authorization': 'Bearer ' + currentUser.token }
+      });
       if (res.ok) { setReports([]); showToast('All reports deleted. Chain reset!','success'); }
       else throw new Error();
     } catch { setReports([]); showToast('Cleared locally','info'); }
@@ -840,8 +956,10 @@ function App() {
 
       {isAdmin
         ? <AdminDashboard reports={reports} onStatusUpdate={handleStatusUpdate}
-            onDelete={handleDeleteSingle} onDeleteAll={handleDeleteAll} onRefresh={loadReports}/>
-        : <UserDashboard reports={reports} onSubmit={handleSubmit} loading={loading} currentUser={currentUser}/>
+            onDelete={handleDeleteSingle} onDeleteAll={handleDeleteAll} onRefresh={loadReports}
+            onVerifyChain={handleVerifyChain}/>
+        : <UserDashboard reports={reports} onSubmit={handleSubmit} loading={loading} currentUser={currentUser}
+            onVerifyChain={handleVerifyChain}/>
       }
 
       <Toast message={toast.message} type={toast.type} visible={toast.visible}/>
