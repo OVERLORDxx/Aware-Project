@@ -21,16 +21,6 @@ function saveUsers(users) {
   localStorage.setItem('aware_users', JSON.stringify(users));
 }
 
-// ─── AI ANALYSIS ─────────────────────────────────────────────────────────────
-async function analyzeImageWithAI(file) {
-  const formData = new FormData();
-  formData.append('file', file);
-  const res = await fetch(`${API}/analyze`, { method: 'POST', body: formData });
-  if (!res.ok) throw new Error('Analyze endpoint returned ' + res.status);
-  const text = await res.text();
-  return text.trim();
-}
-
 // ─── HELPERS ─────────────────────────────────────────────────────────────────
 function getTypeClass(type) {
   if (!type) return 'type-default';
@@ -98,15 +88,14 @@ function LandingPage({ onGetStarted }) {
         </h1>
         <p className="land-hero-desc">
           AWARE is a tamper-proof civic reporting platform where every issue is
-          cryptographically hashed and linked — creating an immutable chain of civic
-          data verified by Hugging Face AI image analysis.
+          cryptographically hashed and linked — creating an immutable chain of civic data.
         </p>
         <div className="land-hero-btns">
           <button className="btn-land-primary" onClick={onGetStarted}>🚀 Start Reporting Now</button>
           <a className="btn-land-secondary" href="#about">Learn More ↓</a>
         </div>
         <div className="land-stats">
-          {[{n:'SHA-256',l:'Hash Algorithm'},{n:'BLIP AI',l:'Image Analysis'},{n:'100%',l:'Tamper Proof'},{n:'Live',l:'Status Updates'}].map(s=>(
+          {[{n:'SHA-256',l:'Hash Algorithm'},{n:'100%',l:'Tamper Proof'},{n:'Live',l:'Status Updates'}].map(s=>(
             <div key={s.l} className="land-stat">
               <span className="land-stat__num">{s.n}</span>
               <span className="land-stat__label">{s.l}</span>
@@ -126,7 +115,6 @@ function LandingPage({ onGetStarted }) {
         <div className="land-features">
           {[
             {icon:'🔗',title:'Blockchain Hashing',desc:'Every report generates a SHA-256 hash linked to the previous, creating a verifiable chain.'},
-            {icon:'🤖',title:'BLIP AI Analysis',desc:'Hugging Face BLIP model reads your uploaded image and generates a natural language description of the issue.'},
             {icon:'📍',title:'GPS Location',desc:'Auto-detect your GPS location via OpenStreetMap or type an address manually.'},
             {icon:'🛡️',title:'Admin Dashboard',desc:'Separate admin portal to manage statuses, view all reports, and manage registered users.'},
             {icon:'🔒',title:'Role-Based Access',desc:'Users submit reports. Admins manage them. Clear separation of responsibilities.'},
@@ -147,17 +135,16 @@ function LandingPage({ onGetStarted }) {
         <div className="land-steps">
           {[
             {n:'01',title:'Sign Up / Login',desc:'Create your account or login. Admins have a separate secure portal.'},
-            {n:'02',title:'Upload Image',desc:'Select issue type, describe the problem, detect GPS location, upload a photo.'},
-            {n:'03',title:'AI Analyzes',desc:'Spring Boot sends your image to Hugging Face BLIP. BLIP describes what it sees. We map it to a civic category.'},
-            {n:'04',title:'Hash Generated',desc:'Spring Boot creates a SHA-256 hash linking your report to the previous one.'},
-            {n:'05',title:'Stored in MySQL',desc:'Saved with hash, location, AI label, submitter info, and status.'},
-            {n:'06',title:'Admin Reviews',desc:'Admin updates status (Pending → In Progress → Completed) and manages the chain.'},
+            {n:'02',title:'Upload Details',desc:'Select issue type, describe the problem, detect GPS location, and optionally upload a photo.'},
+            {n:'03',title:'Hash Generated',desc:'Spring Boot creates a SHA-256 hash linking your report to the previous one.'},
+            {n:'04',title:'Stored in MySQL',desc:'Saved with hash, location, submitter info, and status.'},
+            {n:'05',title:'Admin Reviews',desc:'Admin updates status (Pending → In Progress → Completed) and manages the chain.'},
           ].map((s,i)=>(
             <div key={s.n} className="land-step">
               <div className="land-step-num">{s.n}</div>
               <div className="land-step-title">{s.title}</div>
               <div className="land-step-desc">{s.desc}</div>
-              {i<5 && <div className="land-step-arrow">→</div>}
+              {i<4 && <div className="land-step-arrow">→</div>}
             </div>
           ))}
         </div>
@@ -171,7 +158,6 @@ function LandingPage({ onGetStarted }) {
             {icon:'⚛️',name:'React',desc:'Frontend UI'},
             {icon:'☕',name:'Spring Boot',desc:'Java Backend'},
             {icon:'🐬',name:'MySQL',desc:'Database'},
-            {icon:'🤗',name:'HF BLIP',desc:'AI Vision Model'},
             {icon:'🔐',name:'SHA-256',desc:'Hash Algorithm'},
             {icon:'📍',name:'OpenStreetMap',desc:'GPS Geocoding'},
           ].map(t=>(
@@ -194,7 +180,7 @@ function LandingPage({ onGetStarted }) {
             <div className="creator-role">Full Stack Developer · AWARE Project</div>
             <div className="creator-bio">
               Built AWARE as a civic technology project combining blockchain-inspired data integrity,
-              Hugging Face AI image analysis via Spring Boot, and real-time status tracking to help
+              Spring Boot backend, and real-time status tracking to help
               citizens report and track local infrastructure issues effectively.
             </div>
             <div className="creator-contacts">
@@ -387,9 +373,7 @@ function ReportCard({ report, delay, isAdmin, onStatusUpdate, onDelete }) {
           <div className="card-location"><span className="loc-icon">📍</span><span>{report.location}</span></div>
         )}
 
-        {report.aiLabel && (
-          <div className="card-ai-label">🤖 {report.aiLabel}</div>
-        )}
+
 
         <div className="hash-block">
           <div className="hash-row">
@@ -429,7 +413,7 @@ function ReportCard({ report, delay, isAdmin, onStatusUpdate, onDelete }) {
 }
 
 // ─── UPLOAD ZONE ──────────────────────────────────────────────────────────────
-function UploadZone({ onFileSelect, fileName, previewUrl, aiResult, analyzing }) {
+function UploadZone({ onFileSelect, fileName, previewUrl }) {
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef();
   const handleDrop = (e) => {
@@ -439,7 +423,7 @@ function UploadZone({ onFileSelect, fileName, previewUrl, aiResult, analyzing })
   };
   return (
     <div className="field">
-      <label className="field-label">Upload Image <span className="field-label--muted">(optional · AI analyzed by Hugging Face BLIP)</span></label>
+      <label className="field-label">Upload Image <span className="field-label--muted">(optional)</span></label>
       <div className={`upload-zone ${dragging?'upload-zone--drag':''}`}
         onDragOver={e=>{e.preventDefault();setDragging(true);}} onDragLeave={()=>setDragging(false)}
         onDrop={handleDrop} onClick={()=>inputRef.current.click()}>
@@ -447,20 +431,10 @@ function UploadZone({ onFileSelect, fileName, previewUrl, aiResult, analyzing })
           onChange={e=>{ const f=e.target.files[0]; if(f) onFileSelect(f); }}/>
         <div className="upload-icon-wrap">📷</div>
         <div className="upload-main-text">Drop image here or <span className="highlight">browse</span></div>
-        <div className="upload-sub-text">PNG, JPG up to 10MB · Hugging Face BLIP will describe the issue</div>
+        <div className="upload-sub-text">PNG, JPG up to 10MB</div>
         {fileName && <div className="upload-filename">✓ {fileName}</div>}
         {previewUrl && <img src={previewUrl} alt="preview" className="preview-img"/>}
       </div>
-      {analyzing && (
-        <div className="ai-result ai-result--loading">
-          🤖 Sending image to Hugging Face via Spring Boot... check IntelliJ console for [AI] logs
-        </div>
-      )}
-      {!analyzing && aiResult && (
-        <div className="ai-result">
-          🤖 <strong>{aiResult}</strong>
-        </div>
-      )}
     </div>
   );
 }
@@ -474,8 +448,6 @@ function ReportForm({ onSubmit, loading, currentUser }) {
   const [file,        setFile]        = useState(null);
   const [fileName,    setFileName]    = useState('');
   const [previewUrl,  setPreviewUrl]  = useState('');
-  const [aiResult,    setAiResult]    = useState('');
-  const [analyzing,   setAnalyzing]   = useState(false);
 
   const detectLocation = () => {
     if (!navigator.geolocation) { setLocation('Geolocation not supported'); return; }
@@ -494,40 +466,21 @@ function ReportForm({ onSubmit, loading, currentUser }) {
     );
   };
 
-  const handleFileSelect = async (f) => {
+  const handleFileSelect = (f) => {
     setFile(f); setFileName(f.name);
     setPreviewUrl(URL.createObjectURL(f));
-    setAiResult(''); setAnalyzing(true);
-
-    try {
-      const result = await analyzeImageWithAI(f);
-      // Always show whatever the backend returned — even raw labels
-      // Check Spring Boot terminal for [AI] logs to see exactly what HF returned
-      if (result && result.trim() !== '') {
-        setAiResult(result.trim());
-      } else {
-        // Backend returned empty — model was still loading after retry
-        // User should wait a few seconds and re-upload the image
-        setAiResult('Model warming up — please re-upload the image in 10 seconds');
-      }
-    } catch (e) {
-      setAiResult('Spring Boot offline — start it on :8080 first');
-    } finally {
-      setAnalyzing(false);
-    }
   };
 
   const handleSubmit = () => {
     onSubmit(
       {
         issueType, description, location, file,
-        aiLabel: aiResult,
         submittedBy: currentUser.username,
         submitterEmail: currentUser.email || ''
       },
       () => {
         setIssueType(''); setDescription(''); setLocation('');
-        setFile(null); setFileName(''); setPreviewUrl(''); setAiResult(''); setAnalyzing(false);
+        setFile(null); setFileName(''); setPreviewUrl('');
       }
     );
   };
@@ -565,13 +518,11 @@ function ReportForm({ onSubmit, loading, currentUser }) {
         </div>
       </div>
 
-      <UploadZone onFileSelect={handleFileSelect} fileName={fileName} previewUrl={previewUrl} aiResult={aiResult} analyzing={analyzing}/>
+      <UploadZone onFileSelect={handleFileSelect} fileName={fileName} previewUrl={previewUrl}/>
 
-      <button className="btn-submit" disabled={loading || analyzing} onClick={handleSubmit}>
+      <button className="btn-submit" disabled={loading} onClick={handleSubmit}>
         {loading
           ? <><span className="spinner"/> Hashing &amp; Submitting...</>
-          : analyzing
-          ? '⏳ Waiting for AI analysis...'
           : 'Submit Report & Generate Hash'
         }
       </button>
@@ -579,7 +530,6 @@ function ReportForm({ onSubmit, loading, currentUser }) {
       <div className="form-footer">
         <div className="feature-chip"><div className="dot-c dot-c--blue"/>SHA-256</div>
         <div className="feature-chip"><div className="dot-c dot-c--violet"/>Chain Linked</div>
-        <div className="feature-chip"><div className="dot-c dot-c--green"/>HF BLIP AI</div>
       </div>
     </div>
   );
@@ -729,9 +679,9 @@ function UserDashboard({ reports, onSubmit, loading, currentUser }) {
         <div className="hero-left">
           <div className="hero-eyebrow">🔗 Blockchain-Inspired Integrity</div>
           <h1 className="hero-title">Report Civic Issues.<br/><span className="hero-title__accent">Verified &amp; Immutable.</span></h1>
-          <p className="hero-desc">Every report is cryptographically hashed with SHA-256 and linked to the previous entry — a tamper-proof chain powered by Hugging Face BLIP AI image analysis.</p>
+          <p className="hero-desc">Every report is cryptographically hashed with SHA-256 and linked to the previous entry — a tamper-proof chain powered by Spring Boot backend.</p>
           <div className="tech-badges">
-            {['Spring Boot','MySQL','SHA-256','HF BLIP AI','Hash Chain'].map(b=><span key={b} className="tech-badge">{b}</span>)}
+            {['Spring Boot','MySQL','SHA-256','Hash Chain'].map(b=><span key={b} className="tech-badge">{b}</span>)}
           </div>
           <div className="hero-stats">
             <div className="stat"><div className="stat-num">{reports.length||'—'}</div><div className="stat-label">Reports Filed</div></div>
@@ -809,7 +759,7 @@ function App() {
   const handleLogin  = (user) => { setCurrentUser(user); setScreen('app'); };
   const handleSignup = (user) => { showToast(`Account created for ${user.username}! Now login.`,'success'); };
 
-  const handleSubmit = async ({issueType,description,location,file,aiLabel,submittedBy,submitterEmail}, resetForm) => {
+  const handleSubmit = async ({issueType,description,location,file,submittedBy,submitterEmail}, resetForm) => {
     if (!issueType)          { showToast('Please select an issue type','error'); return; }
     if (!description.trim()) { showToast('Please add a description','error');    return; }
     setLoading(true);
@@ -820,7 +770,6 @@ function App() {
       fd.append('submittedBy', submittedBy||'');
       fd.append('submitterEmail', submitterEmail||'');
       if (location) fd.append('location', location);
-      if (aiLabel)  fd.append('aiLabel',  aiLabel);
       if (file)     fd.append('image',    file);
       const res = await fetch(API, {method:'POST',body:fd});
       if (res.ok) { showToast('Report submitted & chained!','success'); resetForm(); loadReports(); }
@@ -829,7 +778,7 @@ function App() {
       showToast('Demo mode — start Spring Boot on :8080','info');
       setReports(prev=>[{
         id:Date.now(), issueType, description, location,
-        aiLabel:aiLabel||null, submittedBy, submitterEmail,
+        submittedBy, submitterEmail,
         status:'PENDING', hash:generateFakeHash(), previousHash:'0'.repeat(64), image:null
       },...prev]);
       resetForm();

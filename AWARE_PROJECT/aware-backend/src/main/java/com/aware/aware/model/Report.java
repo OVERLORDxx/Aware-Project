@@ -24,7 +24,6 @@ public class Report {
     @Column(columnDefinition = "TEXT")
     private String location;
 
-    private String aiLabel;
 
     // ✅ Who submitted this report
     private String submittedBy;      // username
@@ -50,8 +49,7 @@ public class Report {
     public void   setPreviousHash(String v)   { this.previousHash = v; }
     public String getLocation()               { return location; }
     public void   setLocation(String v)       { this.location = v; }
-    public String getAiLabel()                { return aiLabel; }
-    public void   setAiLabel(String v)        { this.aiLabel = v; }
+
     public String getSubmittedBy()            { return submittedBy; }
     public void   setSubmittedBy(String v)    { this.submittedBy = v; }
     public String getSubmitterEmail()         { return submitterEmail; }
